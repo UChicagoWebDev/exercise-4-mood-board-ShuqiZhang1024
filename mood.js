@@ -3,16 +3,19 @@ const bing_api_key = BING_API_KEY
 
 function runSearch() {
 
-  // TODO: Clear the results pane before you run a new search
+  // Clear the results pane before you run a new search
+  document.getElementById("resultsImageContainer").innerHTML = "";
 
   openResultsPane();
 
-  // TODO: Build your query by combining the bing_api_endpoint and a query attribute
-  //  named 'q' that takes the value from the search bar input field.
+  // Build your query by combining the bing_api_endpoint and a query attribute
+  // named 'q' that takes the value from the search bar input field.
+  let searchInputValue = document.querySelector(".search input").value;
+  let searchQuery = `${bing_api_endpoint}?q=${encodeURIComponent(searchInputValue)}`;
 
   let request = new XMLHttpRequest();
 
-  // TODO: Construct the request object and add appropriate event listeners to
+  // Construct the request object and add appropriate event listeners to
   // handle responses. See:
   // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest_API/Using_XMLHttpRequest
   //
@@ -25,12 +28,51 @@ function runSearch() {
   //   - HINT: You'll need to ad even listeners to them after you add them to the DOM
   //
   // request.setRequestHeader("Ocp-Apim-Subscription-Key", bing_api_key);
+  request.open("GET", searchQuery);
 
-  // TODO: Send the request
+  // Setting response type as JSON
+  request.responseType = "json";
+
+  // Handling the response
+  request.onload = function() {
+    let response = request.response;
+    // Check if the response has results
+    if (response.value && response.value.length > 0) {
+      response.value.forEach((imageResult) => {
+        let imgElem = document.createElement("img");
+        imgElem.src = imageResult.thumbnailUrl;
+        let divElem = document.createElement("div");
+        divElem.className = "resultImage";
+        divElem.appendChild(imgElem);
+
+        // Adding event listener for image selection
+        imgElem.addEventListener("click", function() {
+          addToMoodBoard(imageResult.contentUrl);
+        });
+
+        document.getElementById("resultsImageContainer").appendChild(divElem);
+      });
+    }
+  };
+
+  // Adding headers
+  request.setRequestHeader("Ocp-Apim-Subscription-Key", bing_api_key);
+
+  // Send the request
+  request.send();
 
   return false;  // Keep this; it keeps the browser from sending the event
                   // further up the DOM chain. Here, we don't want to trigger
                   // the default form submission behavior.
+}
+
+function addToMoodBoard(imageUrl) {
+  let imgElem = document.createElement("img");
+  imgElem.src = imageUrl;
+  let divElem = document.createElement("div");
+  divElem.className = "savedImage";
+  divElem.appendChild(imgElem);
+  document.getElementById("board").appendChild(divElem);
 }
 
 function openResultsPane() {
@@ -52,4 +94,12 @@ document.querySelector(".search input").addEventListener("keypress", (e) => {
 document.querySelector("#closeResultsButton").addEventListener("click", closeResultsPane);
 document.querySelector("body").addEventListener("keydown", (e) => {
   if(e.key == "Escape") {closeResultsPane()}
+});
+
+document.querySelectorAll(".suggestion-item").forEach(item => {
+  item.addEventListener("click", function() {
+    let searchTerm = this.textContent;
+    document.getElementById("searchInput").value = searchTerm;
+    runSearch();
+  });
 });
